@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Диспетчерская панель</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Roboto', -apple-system, sans-serif;
+      background: linear-gradient(180deg, #e0e7ff 0%, #f3e8ff 100%);
+      margin: 0;
+      padding: 0;
+      color: #0f172a;
+      min-height: 100vh;
+    }
+
+    .app-screen {
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app-header {
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+      color: #ffffff;
+      padding: 20px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 4px 20px rgba(30, 27, 75, 0.4);
+    }
+
+    .app-header h1 {
+      margin: 0;
+      font-size: 26px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .content-padding {
+      padding: 16px;
+      flex: 1;
+    }
+
+    .screen-page {
+      display: none;
+    }
+
+    .screen-page.active {
+      display: block;
+    }
+
+    .section-title {
+      color: #312e81;
+      font-size: 24px;
+      font-weight: 900;
+      margin: 12px 0 20px 0;
+      text-transform: uppercase;
+    }
+
+    .driver-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+    }
+
+    .driver-btn {
+      background: #ffffff;
+      color: #0f172a;
+      padding: 22px 20px;
+      border-radius: 16px;
+      font-size: 26px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 3px solid #cbd5e1;
+      border-left: 10px solid #4338ca;
+      outline: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+      transition: all 0.1s ease;
+    }
+
+    .driver-btn:active {
+      background: #4338ca;
+      color: #ffffff;
+      border-color: #312e81;
+      transform: scale(0.98);
+    }
+
+    .driver-btn::after {
+      content: '➔';
+      color: #f59e0b;
+      font-size: 28px;
+      font-weight: 900;
+    }
+
+    .back-btn {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: #ffffff;
+      border: none;
+      padding: 22px 24px;
+      border-radius: 16px;
+      font-size: 24px;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      width: 100%;
+      box-shadow: 0 6px 18px rgba(245, 158, 11, 0.4);
+    }
+
+    .info-card {
+      background: #ffffff;
+      border: 3px solid #cbd5e1;
+      border-left: 10px solid #2563eb;
+      border-radius: 18px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+
+    .info-card p {
+      margin: 16px 0;
+      line-height: 1.5;
+      font-size: 24px;
+      color: #0f172a;
+    }
+
+    .info-card strong {
+      color: #1e3a8a;
+      font-weight: 900;
+    }
+
+    .status-msg {
+      text-align: center;
+      color: #475569;
+      padding: 40px 20px;
+      font-size: 24px;
+      font-weight: 700;
+      background: #ffffff;
+      border-radius: 18px;
+      border: 3px dashed #cbd5e1;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-screen">
+    <div class="app-header">
+      <span style="font-size:32px;">🚛</span>
+      <h1>Диспетчерская</h1>
+    </div>
+
+    <div class="content-padding">
+      <div id="loader" class="status-msg">⏳ Загрузка данных...</div>
+
+      <div id="page-list" class="screen-page">
+        <div class="section-title">👤 Выберите водителя:</div>
+        <div id="driver-list-container" class="driver-list"></div>
+      </div>
+
+      <div id="page-details" class="screen-page">
+        <button class="back-btn" onclick="openListPage()">
+          <span>⬅️ Вернуться к списку</span>
+        </button>
+        <div id="driver-details-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Вставьте сюда вашу ссылку из Google Apps Script
+    const API_URL = "https://script.google.com/macros/s/AKfycbxlSHdkO8OWYtCwpdkIrwtrwzj17j_AI_svixpz-7i9TsvHuid18TRjamjIz3OVN8d75g/exec";
+    let tableData = [];
+
+    async function loadData() {
+      try {
+        const response = await fetch(API_URL);
+        tableData = await response.json();
+
+        if (tableData.error) {
+          document.getElementById("loader").innerHTML = "❌ " + tableData.error;
+          return;
+        }
+
+        renderDriverList();
+        document.getElementById("loader").style.display = "none";
+        document.getElementById("page-list").classList.add("active");
+      } catch (err) {
+        document.getElementById("loader").innerHTML = "❌ Ошибка загрузки данных. Проверьте ссылку API.";
+      }
+    }
+
+    function renderDriverList() {
+      let driversSet = new Set();
+      for (let i = 1; i < tableData.length; i++) {
+        let driverName = tableData[i][13];
+        if (driverName && String(driverName).trim() !== "") {
+          driversSet.add(String(driverName).trim());
+        }
+      }
+      let sortedDrivers = Array.from(driversSet).sort();
+
+      const container = document.getElementById("driver-list-container");
+      container.innerHTML = sortedDrivers.map(driver => `
+        <button class="driver-btn" onclick="openDriverPage('${driver.replace(/'/g, "\\'")}')">
+          <span>👤 ${driver}</span>
+        </button>
+      `).join('');
+    }
+
+    function isFilled(val) {
+      if (val === null || val === undefined) return false;
+      const str = String(val).trim();
+      return str !== "" && str !== "0" && str !== "0.0";
+    }
+
+    function openDriverPage(driverName) {
+      const listPage = document.getElementById("page-list");
+      const detailsPage = document.getElementById("page-details");
+      const detailsContent = document.getElementById("driver-details-content");
+
+      let html = '<div class="section-title">🚚 Водитель: ' + driverName + '</div>';
+      let foundRecords = false;
+
+      for (let i = 1; i < tableData.length; i++) {
+        if (String(tableData[i][13]).trim() === driverName) {
+          foundRecords = true;
+          
+          html += '<div class="info-card">';
+          
+          if (isFilled(tableData[i][0])) {
+            let dateVal = tableData[i][0];
+            let dateStr = dateVal;
+            if (dateVal instanceof Date || !isNaN(Date.parse(dateVal))) {
+               try {
+                 dateStr = new Date(dateVal).toLocaleDateString('ru-RU');
+               } catch(e) {}
+            }
+            html += '<p><strong>📅 Дата:</strong> ' + dateStr + '</p>';
+          }
+
+          let dep = isFilled(tableData[i][3]) ? String(tableData[i][3]).trim() : "";
+          let fio = isFilled(tableData[i][4]) ? String(tableData[i][4]).trim() : "";
+          let depFio = "";
+          if (dep && fio) { depFio = dep + " / " + fio; }
+          else if (dep) { depFio = dep; }
+          else if (fio) { depFio = fio; }
+          
+          if (depFio) {
+            html += '<p><strong>🏢 Подразделение / ФИО:</strong> ' + depFio + '</p>';
+          }
+
+          if (isFilled(tableData[i][6])) {
+            html += '<p><strong>📍 Пункт назначения:</strong> ' + tableData[i][6] + '</p>';
+          }
+          
+          if (isFilled(tableData[i][7])) {
+            html += '<p><strong>📝 Примечания:</strong> ' + tableData[i][7] + '</p>';
+          }
+          
+          if (isFilled(tableData[i][8])) {
+            html += '<p><strong>📦 Габариты:</strong> ' + tableData[i][8] + '</p>';
+          }
+          
+          if (isFilled(tableData[i][9])) {
+            html += '<p><strong>⚖️ Вес:</strong> ' + tableData[i][9] + ' кг</p>';
+          }
+          
+          if (isFilled(tableData[i][10])) {
+            html += '<p><strong>👥 Пассажиры:</strong> ' + tableData[i][10] + ' чел.</p>';
+          }
+          
+          if (isFilled(tableData[i][12])) {
+            html += '<p><strong>🚗 Гос. номер:</strong> ' + tableData[i][12] + '</p>';
+          }
+
+          html += '</div>'; 
+        }
+      }
+
+      if (!foundRecords) {
+        html += '<div class="status-msg">По этому водителю нет активных заявок.</div>';
+      }
+
+      detailsContent.innerHTML = html;
+
+      listPage.classList.remove("active");
+      detailsPage.classList.add("active");
+      window.scrollTo(0, 0);
+    }
+
+    function openListPage() {
+      document.getElementById("page-details").classList.remove("active");
+      document.getElementById("page-list").classList.add("active");
+      window.scrollTo(0, 0);
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
