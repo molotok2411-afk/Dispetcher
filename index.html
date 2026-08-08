@@ -185,7 +185,7 @@
   <div class="app-screen">
     <div class="app-header">
       <span style="font-size:32px;">🚛</span>
-      <h1>Список водителей</h1>
+      <h1>Диспетчерская</h1>
     </div>
 
     <div class="content-padding">
@@ -233,6 +233,23 @@
       return str !== "" && str !== "0" && str !== "0.0";
     }
 
+    // Функция явного форматирования даты в формат ДД.ММ.ГГГГ
+    function getFormatedDate(i) {
+      if (isFilled(tableData[i][0])) {
+        let dateVal = tableData[i][0];
+        let d = (dateVal instanceof Date) ? dateVal : new Date(Date.parse(dateVal));
+
+        if (!isNaN(d.getTime())) {
+          let day = String(d.getDate()).padStart(2, '0');
+          let month = String(d.getMonth() + 1).padStart(2, '0');
+          let year = d.getFullYear();
+          return `${day}.${month}.${year}`;
+        }
+        return dateVal;
+      }
+      return "";
+    }
+
     function renderDriverList() {
       let driversSet = new Set();
       let unassignedList = [];
@@ -275,14 +292,8 @@
       let cardBorderStyle = isUnassigned ? 'border-left: 8px solid #ef4444;' : '';
       let html = '<div class="info-card" style="' + cardBorderStyle + '">';
       
-      if (isFilled(tableData[i][0])) {
-        let dateVal = tableData[i][0];
-        let dateStr = dateVal;
-        if (dateVal instanceof Date || !isNaN(Date.parse(dateVal))) {
-           try {
-             dateStr = new Date(dateVal).toLocaleDateString('ru-RU');
-           } catch(e) {}
-        }
+      let dateStr = getFormatedDate(i);
+      if (dateStr) {
         html += '<p><strong>📅 Дата:</strong> ' + dateStr + '</p>';
       }
 
