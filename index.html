@@ -235,46 +235,22 @@
 
     // Функция явного форматирования даты в формат ДД.ММ.ГГГГ
     function getFormatedDate(i) {
-  if (!isFilled(tableData[i][0])) return "";
-  
-  let val = tableData[i][0];
-  let d;
+      if (isFilled(tableData[i][0])) {
+        let dateVal = tableData[i][0];
+        let d = (dateVal instanceof Date) ? dateVal : new Date(Date.parse(dateVal));
 
-  // 1. Если это уже объект Date
-  if (val instanceof Date) {
-    d = val;
-  } 
-  // 2. Если это строка формата "ММ/ДД/ГГГГ" или "ММ.ДД.ГГГГ"
-  else if (typeof val === 'string' && val.includes('.')) {
-    let parts = val.split('.');
-    if (parts.length === 3) {
-      // Если пришла строка "10.05.2026", проверяем, что где
-      let p1 = parseInt(parts[0], 10);
-      let p2 = parseInt(parts[1], 10);
-      let year = parseInt(parts[2], 10);
-      
-      // Если первое число > 12, то это точно День (ДД.ММ.ГГГГ)
-      if (p1 > 12) {
-        return ${String(p1).padStart(2, '0')}.${String(p2).padStart(2, '0')}.${year};
+        if (!isNaN(d.getTime())) {
+          let day = String(d.getDate()).padStart(2, '0');
+          let month = String(d.getMonth() + 1).padStart(2, '0');
+          let year = d.getFullYear();
+          return `${day}.${month}.${year}`;
+        }
+        return dateVal;
       }
+      return "";
     }
-    d = new Date(val);
-  } 
-  else {
-    d = new Date(val);
-  }
 
-  // Проверка на валидность даты
-  if (!isNaN(d.getTime())) {
-    let day = String(d.getDate()).padStart(2, '0');
-    let month = String(d.getMonth() + 1).padStart(2, '0');
-    let year = d.getFullYear();
-    return ${day}.${month}.${year};
-  }
-
-  // Если распарсить не удалось, возвращаем исходное значение
-  return val;
-}    function renderDriverList() {
+    function renderDriverList() {
       let driversSet = new Set();
       let unassignedList = [];
 
