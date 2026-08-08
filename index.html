@@ -226,20 +226,35 @@
 
     function renderDriverList() {
       let driversSet = new Set();
+      let hasUnassigned = false;
+
       for (let i = 1; i < tableData.length; i++) {
         let driverName = tableData[i][13];
         if (driverName && String(driverName).trim() !== "") {
           driversSet.add(String(driverName).trim());
+        } else {
+          hasUnassigned = true;
         }
       }
-      let sortedDrivers = Array.from(driversSet).sort();
 
+      let sortedDrivers = Array.from(driversSet).sort();
       const container = document.getElementById("driver-list-container");
-      container.innerHTML = sortedDrivers.map(driver => `
+
+      let html = sortedDrivers.map(driver => `
         <button class="driver-btn" onclick="openDriverPage('${driver.replace(/'/g, "\\'")}')">
           <span>👤 ${driver}</span>
         </button>
       `).join('');
+
+      if (hasUnassigned) {
+        html = `
+          <button class="driver-btn" style="border-left-color: #ef4444; color: #dc2626;" onclick="openDriverPage('UNASSIGNED')">
+            <span style="color: #dc2626; font-weight: 900;">⚠️ Не распределено</span>
+          </button>
+        ` + html;
+      }
+
+      container.innerHTML = html;
     }
 
     function isFilled(val) {
@@ -253,14 +268,29 @@
       const detailsPage = document.getElementById("page-details");
       const detailsContent = document.getElementById("driver-details-content");
 
-      let html = '<div class="section-title">🚚 Водитель: ' + driverName + '</div>';
+      const isUnassigned = (driverName === 'UNASSIGNED');
+      
+      let titleText = isUnassigned ? '⚠️ Не распределено' : '🚚 Водитель: ' + driverName;
+      let titleStyle = isUnassigned ? 'color: #ef4444;' : '';
+      
+      let html = '<div class="section-title" style="' + titleStyle + '">' + titleText + '</div>';
       let foundRecords = false;
 
       for (let i = 1; i < tableData.length; i++) {
-        if (String(tableData[i][13]).trim() === driverName) {
+        let rawDriver = tableData[i][13];
+        let isCurrentMatch = false;
+
+        if (isUnassigned) {
+          isCurrentMatch = !rawDriver || String(rawDriver).trim() === "";
+        } else {
+          isCurrentMatch = String(rawDriver).trim() === driverName;
+        }
+
+        if (isCurrentMatch) {
           foundRecords = true;
           
-          html += '<div class="info-card">';
+          let cardBorderStyle = isUnassigned ? 'border-left: 8px solid #ef4444;' : '';
+          html += '<div class="info-card" style="' + cardBorderStyle + '">';
           
           if (isFilled(tableData[i][0])) {
             let dateVal = tableData[i][0];
@@ -333,3 +363,4 @@
   </script>
 </body>
 </html>
+
