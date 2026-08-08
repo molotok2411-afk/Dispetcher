@@ -233,31 +233,12 @@
       return str !== "" && str !== "0" && str !== "0.0";
     }
 
-    // Универсальная функция форматирования даты в ДД.ММ.ГГГГ
-    function getFormatedDate(i) {
-      if (!isFilled(tableData[i][0])) return "";
-      
-      let val = String(tableData[i][0]).trim();
-
-      // Разбираем формат ММ/ДД/ГГГГ или ММ.ДД.ГГГГ
-      let parts = val.split(/[.\/]/);
-      if (parts.length === 3 && parts[2].length === 4) {
-        let m = parts[0].padStart(2, '0');
-        let d = parts[1].padStart(2, '0');
-        let y = parts[2];
-        return `${d}.${m}.${y}`;
+    // Возвращает чистый текст из первой ячейки (столбец 0 / A)
+    function getCellText(i) {
+      if (isFilled(tableData[i][0])) {
+        return String(tableData[i][0]).trim();
       }
-
-      // Разбираем стандартный ISO объект Date
-      let d = new Date(tableData[i][0]);
-      if (!isNaN(d.getTime())) {
-        let day = String(d.getDate()).padStart(2, '0');
-        let month = String(d.getMonth() + 1).padStart(2, '0');
-        let year = d.getFullYear();
-        return `${day}.${month}.${year}`;
-      }
-
-      return val;
+      return "";
     }
 
     function renderDriverList() {
@@ -302,9 +283,9 @@
       let cardBorderStyle = isUnassigned ? 'border-left: 8px solid #ef4444;' : '';
       let html = '<div class="info-card" style="' + cardBorderStyle + '">';
       
-      let dateStr = getFormatedDate(i);
-      if (dateStr) {
-        html += '<p><strong>📅 Дата:</strong> ' + dateStr + '</p>';
+      let firstCellContent = getCellText(i);
+      if (firstCellContent) {
+        html += '<p><strong>📌 Данные:</strong> ' + firstCellContent + '</p>';
       }
 
       let dep = isFilled(tableData[i][3]) ? String(tableData[i][3]).trim() : "";
