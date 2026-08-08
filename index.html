@@ -89,7 +89,7 @@
       color: #0f172a;
       padding: 20px 22px;
       border-radius: 16px;
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 700;
       cursor: pointer;
       border: none;
@@ -101,6 +101,7 @@
       width: 100%;
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
       transition: all 0.2s ease;
+      text-align: left;
     }
 
     .driver-btn:active {
@@ -114,6 +115,8 @@
       color: #6366f1;
       font-size: 24px;
       font-weight: 900;
+      margin-left: 12px;
+      flex-shrink: 0;
     }
 
     .driver-btn:active::after {
@@ -189,7 +192,7 @@
       <div id="loader" class="status-msg">⏳ Загрузка данных...</div>
 
       <div id="page-list" class="screen-page">
-        <div class="section-title">👤 Выберите водителя:</div>
+        <div class="section-title">👤 Выберите водителя / заявку:</div>
         <div id="driver-list-container" class="driver-list"></div>
       </div>
 
@@ -224,43 +227,102 @@
       }
     }
 
+    function isFilled(val) {
+      if (val === null || val === undefined) return false;
+      const str = String(val).trim();
+      return str !== "" && str !== "0" && str !== "0.0";
+    }
+
     function renderDriverList() {
       let driversSet = new Set();
-      let hasUnassigned = false;
+      let unassignedList = [];
 
       for (let i = 1; i < tableData.length; i++) {
         let driverName = tableData[i][13];
         if (driverName && String(driverName).trim() !== "") {
           driversSet.add(String(driverName).trim());
         } else {
-          hasUnassigned = true;
+          let destination = isFilled(tableData[i][6]) ? String(tableData[i][6]).trim() : "Пункт не указан";
+          unassignedList.push({ rowIndex: i, destination: destination });
         }
       }
 
       let sortedDrivers = Array.from(driversSet).sort();
       const container = document.getElementById("driver-list-container");
 
-      let html = sortedDrivers.map(driver => `
+      let html = "";
+
+      // Вывод нераспределенных заявок
+      unassignedList.forEach(item => {
+        html += `
+          <button class="driver-btn" style="border-left-color: #ef4444;" onclick="openUnassignedPage(${item.rowIndex})">
+            <span style="color: #dc2626; font-weight: 900;">⚠️ Не распределено / ${item.destination}</span>
+          </button>
+        `;
+      });
+
+      // Вывод распределенных водителей
+      html += sortedDrivers.map(driver => `
         <button class="driver-btn" onclick="openDriverPage('${driver.replace(/'/g, "\\'")}')">
           <span>👤 ${driver}</span>
         </button>
       `).join('');
 
-      if (hasUnassigned) {
-        html = `
-          <button class="driver-btn" style="border-left-color: #ef4444; color: #dc2626;" onclick="openDriverPage('UNASSIGNED')">
-            <span style="color: #dc2626; font-weight: 900;">⚠️ Не распределено</span>
-          </button>
-        ` + html;
-      }
-
       container.innerHTML = html;
     }
 
-    function isFilled(val) {
-      if (val === null || val === undefined) return false;
-      const str = String(val).trim();
-      return str !== "" && str !== "0" && str !== "0.0";
+    function renderRecordCard(i, isUnassigned = false) {
+      let cardBorderStyle = isUnassigned ? 'border-left: 8px solid #ef4444;' : '';
+      let html = '<div class="info-card" style="' + cardBorderStyle + '">';
+      
+      if (isFilled(tableData[i][0])) {
+        let dateVal = tableData[i][0];
+        let dateStr = dateVal;
+        if (dateVal instanceof Date || !isNaN(Date.parse(dateVal))) {
+           try {
+             dateStr = new Date(dateVal).toLocaleDateString('ru-RU');
+           } catch(e) {}
+        }
+        html += '<p><strong>📅 Дата:</strong> ' + dateStr + '</p>';
+      }
+
+      let dep = isFilled(tableData[i][3]) ? String(tableData[i][3]).trim() : "";
+      let fio = isFilled(tableData[i][4]) ? String(tableData[i][4]).trim() : "";
+      let depFio = "";
+      if (dep && fio) { depFio = dep + " / " + fio; }
+      else if (dep) { depFio = dep; }
+      else if (fio) { depFio = fio; }
+      
+      if (depFio) {
+        html += '<p><strong>🏢 Подразделение / ФИО:</strong> ' + depFio + '</p>';
+      }
+
+      if (isFilled(tableData[i][6])) {
+        html += '<p><strong>📍 Пункт назначения:</strong> ' + tableData[i][6] + '</p>';
+      }
+      
+      if (isFilled(tableData[i][7])) {
+        html += '<p><strong>📝 Примечания:</strong> ' + tableData[i][7] + '</p>';
+      }
+      
+      if (isFilled(tableData[i][8])) {
+        html += '<p><strong>📦 Габариты:</strong> ' + tableData[i][8] + '</p>';
+      }
+      
+      if (isFilled(tableData[i][9])) {
+        html += '<p><strong>⚖️ Вес:</strong> ' + tableData[i][9] + ' кг</p>';
+      }
+      
+      if (isFilled(tableData[i][10])) {
+        html += '<p><strong>👥 Пассажиры:</strong> ' + tableData[i][10] + ' чел.</p>';
+      }
+      
+      if (isFilled(tableData[i][12])) {
+        html += '<p><strong>🚗 Гос. номер:</strong> ' + tableData[i][12] + '</p>';
+      }
+
+      html += '</div>';
+      return html;
     }
 
     function openDriverPage(driverName) {
@@ -268,77 +330,13 @@
       const detailsPage = document.getElementById("page-details");
       const detailsContent = document.getElementById("driver-details-content");
 
-      const isUnassigned = (driverName === 'UNASSIGNED');
-      
-      let titleText = isUnassigned ? '⚠️ Не распределено' : '🚚 Водитель: ' + driverName;
-      let titleStyle = isUnassigned ? 'color: #ef4444;' : '';
-      
-      let html = '<div class="section-title" style="' + titleStyle + '">' + titleText + '</div>';
+      let html = '<div class="section-title">🚚 Водитель: ' + driverName + '</div>';
       let foundRecords = false;
 
       for (let i = 1; i < tableData.length; i++) {
-        let rawDriver = tableData[i][13];
-        let isCurrentMatch = false;
-
-        if (isUnassigned) {
-          isCurrentMatch = !rawDriver || String(rawDriver).trim() === "";
-        } else {
-          isCurrentMatch = String(rawDriver).trim() === driverName;
-        }
-
-        if (isCurrentMatch) {
+        if (String(tableData[i][13]).trim() === driverName) {
           foundRecords = true;
-          
-          let cardBorderStyle = isUnassigned ? 'border-left: 8px solid #ef4444;' : '';
-          html += '<div class="info-card" style="' + cardBorderStyle + '">';
-          
-          if (isFilled(tableData[i][0])) {
-            let dateVal = tableData[i][0];
-            let dateStr = dateVal;
-            if (dateVal instanceof Date || !isNaN(Date.parse(dateVal))) {
-               try {
-                 dateStr = new Date(dateVal).toLocaleDateString('ru-RU');
-               } catch(e) {}
-            }
-            html += '<p><strong>📅 Дата:</strong> ' + dateStr + '</p>';
-          }
-
-          let dep = isFilled(tableData[i][3]) ? String(tableData[i][3]).trim() : "";
-          let fio = isFilled(tableData[i][4]) ? String(tableData[i][4]).trim() : "";
-          let depFio = "";
-          if (dep && fio) { depFio = dep + " / " + fio; }
-          else if (dep) { depFio = dep; }
-          else if (fio) { depFio = fio; }
-          
-          if (depFio) {
-            html += '<p><strong>🏢 Подразделение / ФИО:</strong> ' + depFio + '</p>';
-          }
-
-          if (isFilled(tableData[i][6])) {
-            html += '<p><strong>📍 Пункт назначения:</strong> ' + tableData[i][6] + '</p>';
-          }
-          
-          if (isFilled(tableData[i][7])) {
-            html += '<p><strong>📝 Примечания:</strong> ' + tableData[i][7] + '</p>';
-          }
-          
-          if (isFilled(tableData[i][8])) {
-            html += '<p><strong>📦 Габариты:</strong> ' + tableData[i][8] + '</p>';
-          }
-          
-          if (isFilled(tableData[i][9])) {
-            html += '<p><strong>⚖️ Вес:</strong> ' + tableData[i][9] + ' кг</p>';
-          }
-          
-          if (isFilled(tableData[i][10])) {
-            html += '<p><strong>👥 Пассажиры:</strong> ' + tableData[i][10] + ' чел.</p>';
-          }
-          
-          if (isFilled(tableData[i][12])) {
-            html += '<p><strong>🚗 Гос. номер:</strong> ' + tableData[i][12] + '</p>';
-          }
-
-          html += '</div>'; 
+          html += renderRecordCard(i, false);
         }
       }
 
@@ -347,7 +345,22 @@
       }
 
       detailsContent.innerHTML = html;
+      listPage.classList.remove("active");
+      detailsPage.classList.add("active");
+      window.scrollTo(0, 0);
+    }
 
+    function openUnassignedPage(rowIndex) {
+      const listPage = document.getElementById("page-list");
+      const detailsPage = document.getElementById("page-details");
+      const detailsContent = document.getElementById("driver-details-content");
+
+      let destination = isFilled(tableData[rowIndex][6]) ? String(tableData[rowIndex][6]).trim() : "Пункт не указан";
+      let html = '<div class="section-title" style="color: #ef4444;">⚠️ Не распределено / ' + destination + '</div>';
+      
+      html += renderRecordCard(rowIndex, true);
+
+      detailsContent.innerHTML = html;
       listPage.classList.remove("active");
       detailsPage.classList.add("active");
       window.scrollTo(0, 0);
@@ -363,4 +376,3 @@
   </script>
 </body>
 </html>
-
