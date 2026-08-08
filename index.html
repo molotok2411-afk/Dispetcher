@@ -233,21 +233,31 @@
       return str !== "" && str !== "0" && str !== "0.0";
     }
 
-    // Функция явного форматирования даты в формат ДД.ММ.ГГГГ
+    // Универсальная функция форматирования даты в ДД.ММ.ГГГГ
     function getFormatedDate(i) {
-      if (isFilled(tableData[i][0])) {
-        let dateVal = tableData[i][0];
-        let d = (dateVal instanceof Date) ? dateVal : new Date(Date.parse(dateVal));
+      if (!isFilled(tableData[i][0])) return "";
+      
+      let val = String(tableData[i][0]).trim();
 
-        if (!isNaN(d.getTime())) {
-          let day = String(d.getDate()).padStart(2, '0');
-          let month = String(d.getMonth() + 1).padStart(2, '0');
-          let year = d.getFullYear();
-          return `${day}.${month}.${year}`;
-        }
-        return dateVal;
+      // Разбираем формат ММ/ДД/ГГГГ или ММ.ДД.ГГГГ
+      let parts = val.split(/[.\/]/);
+      if (parts.length === 3 && parts[2].length === 4) {
+        let m = parts[0].padStart(2, '0');
+        let d = parts[1].padStart(2, '0');
+        let y = parts[2];
+        return `${d}.${m}.${y}`;
       }
-      return "";
+
+      // Разбираем стандартный ISO объект Date
+      let d = new Date(tableData[i][0]);
+      if (!isNaN(d.getTime())) {
+        let day = String(d.getDate()).padStart(2, '0');
+        let month = String(d.getMonth() + 1).padStart(2, '0');
+        let year = d.getFullYear();
+        return `${day}.${month}.${year}`;
+      }
+
+      return val;
     }
 
     function renderDriverList() {
